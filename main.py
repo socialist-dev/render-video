@@ -4,7 +4,8 @@ import requests
 import shutil
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from fastapi.responses import FileResponse
-from moviepy.editor import ImageClip, concatenate_videoclips
+# SỬA Ở ĐÂY: MoviePy v2 không dùng .editor nữa
+from moviepy import ImageClip, concatenate_videoclips
 
 app = FastAPI()
 
@@ -12,14 +13,12 @@ app = FastAPI()
 TEMP_DIR = "/tmp/video_processing"
 
 def cleanup(folder_path: str):
-    """Xóa toàn bộ file sau khi đã gửi video đi để giải phóng bộ nhớ"""
+    """Xóa toàn bộ file sau khi đã gửi video đi"""
     if os.path.exists(folder_path):
         shutil.rmtree(folder_path)
-        print(f"Cleaned up: {folder_path}")
 
 @app.post("/generate-video")
 async def generate_video(data: dict, background_tasks: BackgroundTasks):
-    # Dữ liệu mong đợi: {"image_urls": ["url1", "url2"], "fps": 24, "duration_per_image": 3}
     image_urls = data.get("image_urls", [])
     duration = data.get("duration_per_image", 3)
     
@@ -36,29 +35,27 @@ async def generate_video(data: dict, background_tasks: BackgroundTasks):
     try:
         for i, url in enumerate(image_urls):
             img_path = os.path.join(work_dir, f"img_{i}.jpg")
-            # Tải ảnh từ Google Drive (n8n gửi link trực tiếp)
             response = requests.get(url, stream=True)
             if response.status_code == 200:
                 with open(img_path, 'wb') as f:
                     f.write(response.content)
                 
-                # Tạo clip từ ảnh, resize để tiết kiệm RAM (Quan trọng!)
-                clip = ImageClip(img_path).set_duration(duration)
-                clip = clip.resize(height=720) # Giới hạn 720p để ko tràn RAM
+                # Cập nhật chuẩn MoviePy v2:
+                # Dùng .with_duration thay cho .set_duration
+                # Dùng .resized thay cho .resize
+                clip = ImageClip(img_path).with_duration(duration)
+                clip = clip.resized(height=720) 
                 clips.append(clip)
 
         # Ghép video
         final_video = concatenate_videoclips(clips, method="compose")
-        # Ghi file với bitrate thấp để xử lý nhanh và nhẹ
+        # Ghi file
         final_video.write_videofile(video_path, fps=24, codec="libx264", audio=False)
         
-        # Đóng các clip để giải phóng RAM ngay lập tức
         for c in clips:
             c.close()
 
-        # Lên lịch xóa file sau khi phản hồi được gửi đi
         background_tasks.add_task(cleanup, work_dir)
-
         return FileResponse(video_path, media_type="video/mp4", filename="video.mp4")
 
     except Exception as e:
