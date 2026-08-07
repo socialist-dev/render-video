@@ -16,6 +16,8 @@ jobs:
           sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
           sudo chmod a+rx /usr/local/bin/yt-dlp
           npm install puppeteer
+          # QUAN TRỌNG: Lệnh này sẽ cài đặt Chrome và mọi thư viện hệ thống (so) còn thiếu
+          npx puppeteer browsers install chrome --install-deps
 
       - name: 1. Render UI & Get Coords
         run: node render_ui.js "${{ github.event.client_payload.title }}"
@@ -31,7 +33,6 @@ jobs:
           W=$(echo $COORDS | cut -d: -f3)
           H=$(echo $COORDS | cut -d: -f4)
 
-          # Lệnh xóa màu đỏ (colorkey) và lồng video vào dưới lỗ thủng
           ffmpeg -i cat.mp4 -i cover.png -filter_complex \
           "[1:v]colorkey=0xFF0000:0.1:0.1[ui_mask]; \
            [0:v]scale=$W:$H:force_original_aspect_ratio=increase,crop=$W:$H,pad=1080:1920:$X:$Y:color=white[v_bg]; \
@@ -39,6 +40,6 @@ jobs:
 
       - name: 4. Gửi video về n8n
         run: |
-          curl -X POST "${{ github.event.client_payload.resume_url }}" \
+          curl -v -X POST "${{ github.event.client_payload.resume_url }}" \
           -H "X-N8N-TOKEN: ${{ secrets.N8N_WAIT_TOKEN }}" \
           -F "data=@output.mp4"
