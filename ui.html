@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            /* overflow: hidden; */
+            font-family: 'Arial', 'Helvetica', 'Segoe UI', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            width: 100%;
+            padding: 5cqi;
+            max-width: 100vw;
+            aspect-ratio: 9/16;
+            display: flex;
+            flex-direction: column;
+            container-type: size;
+            gap: 5cqi;
+            justify-content: center;
+            /* box-sizing: border-box; */
+
+            .container__header {
+                display: flex;
+                flex-direction: column;
+                gap: 4cqi;
+
+                .header__channel {
+                    display: flex;
+                    /* background-color: beige; */
+                    gap: 2cqi;
+
+                    .channel__avatar img {
+                        width: 10cqi;
+                        border-radius: 100cqi;
+                    }
+
+                    .channel__username {
+
+                        h3 {
+                            font-size: 5cqi;
+                        }
+                        p {
+                            font-size: 4.2cqi;
+                            color: #6d6d6d;
+                        }
+                    }
+                }
+                .header__title {
+                    p {
+                        font-size: 4.2cqi;
+                    }
+                }
+            }
+            .container__content {
+                box-sizing: border-box;
+                display: flex;
+                height: auto;
+
+                video {
+                    background: #FF0000;
+                    border-radius: 3cqi;
+                    width: 100%;
+                    height: 70vh;
+                    object-fit: cover;
+                }
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="container__header">
+            <div class="header__channel">
+                <div class="channel__avatar">
+                    <img src="https://i.pinimg.com/236x/6c/99/d8/6c99d882f8eec65f9ee0bd502c17ac84.jpg" alt="">
+                </div>
+                <div class="channel__username">
+                    <h3>Cat Universe</h3>
+                    <p>@catuniverse</p>
+                </div>
+            </div>
+            <div class="header__title">
+                <p>Hello this is title for project</p>
+            </div>
+        </div>
+        <div class="container__content">
+            <video muted loop autoplay src=""></video>
+        </div>
+    </div>
+</body>
+</html>
