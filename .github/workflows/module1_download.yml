@@ -1,0 +1,23 @@
+name: Module 1 - Test Download
+on:
+  repository_dispatch:
+    types: [test_download] # Tên event để n8n gọi
+
+jobs:
+  download_job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 1. Cài đặt yt-dlp
+        run: |
+          sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
+          sudo chmod a+rx /usr/local/bin/yt-dlp
+
+      - name: 2. Tải Video từ Instagram
+        run: |
+          # Dùng URL n8n gửi sang, tải về đặt tên là test.mp4
+          yt-dlp "${{ github.event.client_payload.instagram_url }}" -o "test.mp4" --no-check-certificate
+
+      - name: 3. Kiểm tra file đã tải
+        run: |
+          # Lệnh này để xem file có tồn tại và nặng bao nhiêu MB
+          ls -lh test.mp4
