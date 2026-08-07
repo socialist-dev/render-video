@@ -9,7 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: 1. Cài đặt công cụ và Chrome
+      - name: 1. Setup Tools & Chrome
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
@@ -18,29 +18,28 @@ jobs:
           npm install puppeteer
           sudo npx puppeteer browsers install chrome --install-deps
 
-      - name: 2. Tạo ảnh UI và Lấy tọa độ chuẩn
+      - name: 2. Render UI & Get Coords
         run: node render_ui.js "${{ github.event.client_payload.title }}"
 
-      - name: 3. Tải Video từ Instagram
+      - name: 3. Download Instagram Video
         run: yt-dlp "${{ github.event.client_payload.instagram_url }}" -o "cat.mp4" --no-check-certificate
 
-      - name: 4. Hòa trộn bằng FFmpeg
+      - name: 4. Final Render (FFmpeg)
         run: |
-          # Đọc tọa độ từ file coords.txt do bước 2 tạo ra
           COORDS=$(cat coords.txt)
           X=$(echo $COORDS | cut -d: -f1)
           Y=$(echo $COORDS | cut -d: -f2)
           W=$(echo $COORDS | cut -d: -f3)
           H=$(echo $COORDS | cut -d: -f4)
 
-          # Thực hiện dán video vào lỗ hổng màu đỏ trên UI
           ffmpeg -i cat.mp4 -i cover.png -filter_complex \
           "[1:v]colorkey=0xFF0000:0.1:0.1[ui_mask]; \
            [0:v]scale=$W:$H:force_original_aspect_ratio=increase,crop=$W:$H,pad=1080:1920:$X:$Y:color=white[v_bg]; \
            [v_bg][ui_mask]overlay=0:0" -c:v libx264 -pix_fmt yuv420p -preset fast -c:a copy output.mp4
 
-      - name: 5. Gửi video về n8n
+      - name: 5. Send Video to Telegram
         run: |
-          curl -v -X POST "${{ github.event.client_payload.resume_url }}" \
-          -H "X-N8N-TOKEN: ${{ secrets.N8N_WAIT_TOKEN }}" \
-          -F "data=@output.mp4"
+          curl -v -F "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+          -F "video=@output.mp4" \
+          -F "caption=✅ Render thành công!%0A📌 Tiêu đề: ${{ github.event.client_payload.title }}" \
+          https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendVideo
