@@ -1,0 +1,25 @@
+name: Module 2 - Test Render UI
+on:
+  repository_dispatch:
+    types: [test_render]
+
+jobs:
+  render_job:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: 1. Cai dat Chrome va Dependencies
+        run: |
+          npm install puppeteer
+          # Lenh quan trong nhat de fix loi "Signal 6" hoac thieu thu vien .so
+          sudo npx puppeteer browsers install chrome --install-deps
+
+      - name: 2. Chay Script Render UI
+        run: |
+          node render_ui.js "Day la tieu de thu nghiem Module 2"
+
+      - name: 3. Kiem tra file ket qua
+        run: |
+          ls -lh cover.png
+          cat coords.txt
