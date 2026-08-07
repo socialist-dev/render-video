@@ -12,21 +12,32 @@ jobs:
       - name: Setup Node & Tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          # Cài đặt FFmpeg và các thư viện hỗ trợ Chrome
+          sudo apt-get install -y ffmpeg libgbm-dev wget unzip
+          
+          # Cài đặt yt-dlp
           sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
           sudo chmod a+rx /usr/local/bin/yt-dlp
+          
+          # Cài đặt Puppeteer
           npm install puppeteer
-          # QUAN TRỌNG: Lệnh này sẽ cài đặt Chrome và mọi thư viện hệ thống (so) còn thiếu
-          npx puppeteer browsers install chrome --install-deps
+          
+          # QUAN TRỌNG: Chạy lệnh cài đặt Chrome với quyền SUDO
+          sudo npx puppeteer browsers install chrome --install-deps
 
       - name: 1. Render UI & Get Coords
         run: node render_ui.js "${{ github.event.client_payload.title }}"
 
       - name: 2. Download Video
-        run: yt-dlp "${{ github.event.client_payload.instagram_url }}" -o "cat.mp4"
+        run: |
+          # Thêm cờ để yt-dlp chạy ổn định hơn trên GitHub
+          yt-dlp "${{ github.event.client_payload.instagram_url }}" -o "cat.mp4" --no-check-certificate
 
       - name: 3. Final Render (FFmpeg)
         run: |
+          # Kiểm tra xem file coords có tồn tại không trước khi chạy
+          if [ ! -f coords.txt ]; then echo "coords.txt not found"; exit 1; fi
+          
           COORDS=$(cat coords.txt)
           X=$(echo $COORDS | cut -d: -f1)
           Y=$(echo $COORDS | cut -d: -f2)
