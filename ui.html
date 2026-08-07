@@ -12,7 +12,8 @@
         }
 
         body {
-            /* overflow: hidden; */
+            /* Tinh chỉnh 1: Đảm bảo nền trong suốt để Puppeteer chụp ảnh PNG sạch */
+            background-color: transparent !important;
             font-family: 'Arial', 'Helvetica', 'Segoe UI', sans-serif;
             display: flex;
             justify-content: center;
@@ -29,7 +30,7 @@
             container-type: size;
             gap: 5cqi;
             justify-content: center;
-            /* box-sizing: border-box; */
+            background-color: white; /* Giữ nền trắng cho khung nội dung */
 
             .container__header {
                 display: flex;
@@ -38,7 +39,6 @@
 
                 .header__channel {
                     display: flex;
-                    /* background-color: beige; */
                     gap: 2cqi;
 
                     .channel__avatar img {
@@ -47,7 +47,6 @@
                     }
 
                     .channel__username {
-
                         h3 {
                             font-size: 5cqi;
                         }
@@ -69,7 +68,8 @@
                 height: auto;
 
                 video {
-                    background: #FF0000;
+                    /* Giữ màu đỏ để FFmpeg nhận diện làm Mask */
+                    background: #FF0000; 
                     border-radius: 3cqi;
                     width: 100%;
                     height: 70vh;
@@ -92,10 +92,12 @@
                 </div>
             </div>
             <div class="header__title">
-                <p>Hello this is title for project</p>
+                <!-- Tinh chỉnh 2: Đặt Placeholder để n8n truyền tiêu đề vào -->
+                <p>TITLE_PLACEHOLDER</p>
             </div>
         </div>
         <div class="container__content">
+            <!-- Thẻ video màu đỏ này sẽ là nơi FFmpeg lồng video thật vào -->
             <video muted loop autoplay src=""></video>
         </div>
     </div>
