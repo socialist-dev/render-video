@@ -1,4 +1,4 @@
-name: Youtube Video Render Engine
+name: Youtube Video Render v2
 on:
   repository_dispatch:
     types: [render_video]
