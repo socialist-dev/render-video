@@ -54,7 +54,8 @@ jobs:
           
           echo "Link download: $DOWNLOAD_URL"
 
-          # Gửi link vào Telegram để bạn lấy cho n8n
-          curl -v -F "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-          -F "text=✅ Render xong! Copy link này dán vào n8n để tải: $DOWNLOAD_URL" \
-          https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage
+          # 2. Gửi dữ liệu về Google Sheets qua Web App URL
+          # Thay URL_WEB_APP_CUA_BAN bằng link bạn vừa copy ở bước trên
+          curl -L -X POST "URL_WEB_APP_CUA_BAN" \
+          -H "Content-Type: application/json" \
+          -d "{\"title\": \"${{ github.event.client_payload.title }}\", \"url\": \"$DOWNLOAD_URL\"}"
