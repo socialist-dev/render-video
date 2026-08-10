@@ -37,9 +37,24 @@ jobs:
            [0:v]scale=$W:$H:force_original_aspect_ratio=increase,crop=$W:$H,pad=1080:1920:$X:$Y:color=white[v_bg]; \
            [v_bg][ui_mask]overlay=0:0" -c:v libx264 -pix_fmt yuv420p -preset fast -c:a copy output.mp4
 
-      - name: 5. Send Video to Telegram
+      # Option 1
+      # - name: 5. Send Video to Telegram
+      #   run: |
+      #     curl -v -F "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+      #     -F "video=@output.mp4" \
+      #     -F "caption=✅ Render thành công!%0A📌 Tiêu đề: ${{ github.event.client_payload.title }}" \
+      #     https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendVideo
+
+      # Option 2
+      - name: 5. Upload to Transfer.sh and Send Link
         run: |
+          # Upload video lên transfer.sh (link tồn tại trong 14 ngày)
+          # Lưu kết quả trả về (đường link) vào biến DOWNLOAD_URL
+          DOWNLOAD_URL=$(curl --upload-file ./output.mp4 https://transfer.sh/output.mp4)
+          
+          echo "Link download: $DOWNLOAD_URL"
+
+          # Gửi cái link này vào Telegram để bạn lấy
           curl -v -F "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-          -F "video=@output.mp4" \
-          -F "caption=✅ Render thành công!%0A📌 Tiêu đề: ${{ github.event.client_payload.title }}" \
-          https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendVideo
+          -F "text=✅ Render xong! Copy link này dán vào n8n để tải: $DOWNLOAD_URL" \
+          https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage
