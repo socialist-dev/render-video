@@ -46,15 +46,15 @@ jobs:
       #     https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendVideo
 
       # Option 2
-      - name: 5. Upload to Transfer.sh and Send Link
+      - name: 5. Upload to Litterbox and Send Link
         run: |
-          # Upload video lên transfer.sh (link tồn tại trong 14 ngày)
-          # Lưu kết quả trả về (đường link) vào biến DOWNLOAD_URL
-          DOWNLOAD_URL=$(curl --upload-file ./output.mp4 https://transfer.sh/output.mp4)
+          # Upload video lên Litterbox (link tồn tại trong 24 giờ)
+          # Lưu link trả về vào biến DOWNLOAD_URL
+          DOWNLOAD_URL=$(curl -s -F "reqtype=fileupload" -F "time=24h" -F "fileToUpload=@output.mp4" https://litterbox.catbox.moe/resources/internals/api.php)
           
           echo "Link download: $DOWNLOAD_URL"
 
-          # Gửi cái link này vào Telegram để bạn lấy
+          # Gửi link vào Telegram để bạn lấy cho n8n
           curl -v -F "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
           -F "text=✅ Render xong! Copy link này dán vào n8n để tải: $DOWNLOAD_URL" \
           https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage
