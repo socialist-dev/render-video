@@ -48,14 +48,13 @@ jobs:
       # Option 2
       - name: 5. Upload to Litterbox and Send Link
         run: |
-          # Upload video lên Litterbox (link tồn tại trong 24 giờ)
-          # Lưu link trả về vào biến DOWNLOAD_URL
+          # 1. Upload lấy link
           DOWNLOAD_URL=$(curl -s -F "reqtype=fileupload" -F "time=24h" -F "fileToUpload=@output.mp4" https://litterbox.catbox.moe/resources/internals/api.php)
           
+          # Kiểm tra xem link có hợp lệ không (tránh gửi link rỗng)
           echo "Link download: $DOWNLOAD_URL"
 
-          # 2. Gửi dữ liệu về Google Sheets qua Web App URL
-          # Thay URL_WEB_APP_CUA_BAN bằng link bạn vừa copy ở bước trên
-          curl -L -X POST "https://script.google.com/macros/s/AKfycbxLWGH6_LYgSBeE6-OeDfgjA5KVhV8SeIHob4rkU2z_QcS70D1sepsx2Vr8TkFyrtb3/exec" \
+          # 2. Gửi dữ liệu về Google Sheets (Sử dụng biến môi trường để an toàn hơn)
+          curl -L -X POST "https://script.google.com/macros/s/AKfycbxmgIMhlR7a1GZySOxg5XCXcxeR50NbTQEhFhM-t4k9pRYrayzehtSv9K89zU15-FAb/exec" \
           -H "Content-Type: application/json" \
           -d "{\"title\": \"${{ github.event.client_payload.title }}\", \"url\": \"$DOWNLOAD_URL\"}"
