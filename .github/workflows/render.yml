@@ -46,28 +46,15 @@ jobs:
       #     https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendVideo
 
       # Option 2
-      - name: 5. Upload Video and Log to Google Sheets
-        id: process_video
+      - name: 5. Upload Video and Save to Google Sheets
         run: |
-          # 1. Upload video lấy link
-          URL=$(curl -s -F "reqtype=fileupload" -F "time=24h" -F "fileToUpload=@output.mp4" https://litterbox.catbox.moe/resources/internals/api.php)
-          
-          # 2. Đưa link và thời gian vào biến đầu ra để dùng ở bước sau
-          echo "DOWNLOAD_URL=$URL" >> $GITHUB_OUTPUT
-          echo "TIME=$(date +'%d/%m/%Y %H:%M:%S')" >> $GITHUB_OUTPUT
+          # 1. Upload video lên Litterbox để lấy link tải (Direct Link)
+          DOWNLOAD_URL=$(curl -s -F "reqtype=fileupload" -F "time=24h" -F "fileToUpload=@output.mp4" https://litterbox.catbox.moe/resources/internals/api.php)
+          echo "Link download: $DOWNLOAD_URL"
 
-      - name: Save to Google Sheets
-        uses: jroehl/gsheet-log-action@v2.0.0
-        with:
-          spreadsheetId: ${{ secrets.GSPREADSHEET_ID }}
-          commands: |
-            appendLine({
-              "STT": "${{ github.run_number }}",
-              "Thời gian": "${{ steps.process_video.outputs.TIME }}",
-              "URL": "${{ steps.process_video.outputs.DOWNLOAD_URL }}",
-              "Trạng thái": "Ready",
-              "Ghi chú": "${{ github.event.client_payload.title }}"
-            })
-        env:
-          GSHEET_CLIENT_EMAIL: ${{ secrets.GSHEET_CLIENT_EMAIL }}
-          GSHEET_PRIVATE_KEY: ${{ secrets.GSHEET_PRIVATE_KEY }}
+          # 2. Xử lý mã hóa tiêu đề (URL Encode) để tránh lỗi nếu tiêu đề có dấu cách hoặc tiếng Việt
+          TITLE_ENCODED=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''${{ github.event.client_payload.title }}'''))")
+
+          # 3. Gửi dữ liệu về Google Sheets qua hàm doGet (Web App URL)
+          # Lưu ý: Bạn hãy thay link dưới đây bằng link Web App mới nhất của bạn
+          curl -L "https://script.google.com/macros/s/AKfycbxKtdzArCSoJom9rVoozQYmEAgZrK1eeEb0QEPP0VFlZzr8cUOEr0dNwoAMiErniJ_9/exec"
