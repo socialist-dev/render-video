@@ -57,4 +57,4 @@ jobs:
 
           # 3. Gửi dữ liệu về Google Sheets qua hàm doGet (Web App URL)
           # Lưu ý: Bạn hãy thay link dưới đây bằng link Web App mới nhất của bạn
-          curl -L "https://script.google.com/macros/s/AKfycbxKtdzArCSoJom9rVoozQYmEAgZrK1eeEb0QEPP0VFlZzr8cUOEr0dNwoAMiErniJ_9/exec"
+          curl -L "https://script.google.com/macros/s/AKfycbxKtdzArCSoJom9rVoozQYmEAgZrK1eeEb0QEPP0VFlZzr8cUOEr0dNwoAMiErniJ_9/exec?title=$TITLE_ENCODED&url=$DOWNLOAD_URL"
