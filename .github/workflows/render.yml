@@ -49,15 +49,24 @@ jobs:
       # In step "5. Upload Video and Save to Google Sheets", replace lines 50-60 with:
       - name: 5. Upload Video and Save to Google Sheets
         run: |
-          # 1. Upload video lên Litterbox để lấy link tải (Direct Link)
-          DOWNLOAD_URL=$(curl -s -F "reqtype=fileupload" -F "time=24h" -F "fileToUpload=@output.mp4" https://litterbox.catbox.moe/resources/internals/api.php)
-          echo "Link download: $DOWNLOAD_URL"
-      
-          # 2. Xử lý mã hóa tiêu đề (URL Encode) để tránh lỗi nếu tiêu đề có dấu cách hoặc tiếng Việt
-          TITLE_ENCODED=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''${{ github.event.client_payload.title }}'''))")
+          # 1. Upload video lên Catbox.moe (Ổn định hơn Litterbox rất nhiều)
+          # Link sẽ tồn tại vĩnh viễn (hoặc cho đến khi bạn xóa nếu có tài khoản)
+          DOWNLOAD_URL=$(curl -s -F "reqtype=fileupload" -F "fileToUpload=@output.mp4" https://catbox.moe/user/api.php)
           
-          # 3. URL encode the download URL as well
-          DOWNLOAD_URL_ENCODED=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$DOWNLOAD_URL'''))")
+          # Kiểm tra nếu kết quả trả về không phải là link (bắt đầu bằng http) thì báo lỗi
+          if [[ "$DOWNLOAD_URL" != http* ]]; then
+            echo "❌ Upload failed! Server response:"
+            echo "$DOWNLOAD_URL"
+            exit 1
+          fi
+          
+          echo "✅ Link download: $DOWNLOAD_URL"
       
-          # 4. Gửi dữ liệu về Google Sheets qua hàm doGet (Web App URL)
-          curl -L "https://script.google.com/macros/s/AKfycbxKtdzArCSoJom9rVoozQYmEAgZrK1eeEb0QEPP0VFlZzr8cUOEr0dNwoAMiErniJ_9/exec?title=$TITLE_ENCODED&url=$DOWNLOAD_URL_ENCODED"
+          # 2. Xử lý mã hóa tiêu đề và URL (Dùng biến môi trường để an toàn tuyệt đối)
+          TITLE_RAW="${{ github.event.client_payload.title }}"
+          TITLE_ENCODED=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$TITLE_RAW'''))")
+          URL_ENCODED=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$DOWNLOAD_URL'''))")
+      
+          # 3. Gửi dữ liệu về Google Sheets qua hàm doGet
+          # Tôi đã thêm cờ -f để curl tự dừng nếu Google báo lỗi
+          curl -f -L "https://script.google.com/macros/s/AKfycbxKtdzArCSoJom9rVoozQYmEAgZrK1eeEb0QEPP0VFlZzr8cUOEr0dNwoAMiErniJ_9/exec?title=$TITLE_ENCODED&url=$URL_ENCODED"
