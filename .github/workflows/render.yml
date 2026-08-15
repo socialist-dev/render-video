@@ -49,8 +49,8 @@ jobs:
       # In step "5. Upload Video and Save to Google Sheets", replace lines 50-60 with:
       - name: 5. Upload to Telegram and Log to Sheets
         env:
-          TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TG_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           GS_URL: "https://script.google.com/macros/s/AKfycbxKtdzArCSoJom9rVoozQYmEAgZrK1eeEb0QEPP0VFlZzr8cUOEr0dNwoAMiErniJ_9/exec"
           TITLE: ${{ github.event.client_payload.title }}
         run: |
@@ -59,34 +59,44 @@ jobs:
           
           def run():
               try:
+                  # Lấy thông tin từ môi trường (env)
+                  token = os.environ.get('TELEGRAM_TOKEN')
+                  chat_id = os.environ.get('TELEGRAM_CHAT_ID')
+                  title = os.environ.get('TITLE', 'No Title')
+                  gs_url = os.environ.get('GS_URL')
+
+                  if not token or not chat_id:
+                      print('❌ Thiếu Secret TELEGRAM_TOKEN hoặc TELEGRAM_CHAT_ID')
+                      sys.exit(1)
+
                   # 1. Upload video lên Telegram
                   print('--- Uploading to Telegram ---')
                   with open('output.mp4', 'rb') as f:
                       r_tg = requests.post(
-                          f'https://api.telegram.org/bot{os.environ["TG_TOKEN"]}/sendVideo',
-                          data={'chat_id': os.environ['TG_CHAT_ID'], 'caption': '✅ Rendered: ' + os.environ['TITLE']},
+                          f'https://api.telegram.org/bot{token}/sendVideo',
+                          data={'chat_id': chat_id, 'caption': '✅ Rendered: ' + title},
                           files={'video': f}
                       )
                   
                   if r_tg.status_code != 200:
-                      print(f'Telegram Error: {r_tg.text}')
+                      print(f'❌ Telegram Error: {r_tg.text}')
                       sys.exit(1)
                   
-                  # Lấy file_id từ kết quả trả về
+                  # Lấy file_id
                   file_id = r_tg.json()['result']['video']['file_id']
-                  print(f'✅ File ID: {file_id}')
+                  print(f'✅ File ID thành công: {file_id}')
           
-                  # 2. Gửi file_id sang Google Sheets thay vì URL tạm
+                  # 2. Ghi file_id vào Google Sheets
                   print('--- Logging to Google Sheets ---')
-                  title_enc = urllib.parse.quote(os.environ['TITLE'])
+                  title_enc = urllib.parse.quote(title)
                   file_id_enc = urllib.parse.quote(file_id)
                   
-                  final_gs_url = f'{os.environ["GS_URL"]}?title={title_enc}&url={file_id_enc}'
+                  final_gs_url = f'{gs_url}?title={title_enc}&url={file_id_enc}'
                   r_gs = requests.get(final_gs_url)
                   print(f'✅ Google Sheets response: {r_gs.text}')
                   
               except Exception as e:
-                  print(f'❌ Error: {str(e)}')
+                  print(f'❌ Lỗi Python: {str(e)}')
                   sys.exit(1)
           run()
           "
