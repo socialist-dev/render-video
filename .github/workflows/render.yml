@@ -46,21 +46,18 @@ jobs:
       #     https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendVideo
 
       # Option 2
+      # In step "5. Upload Video and Save to Google Sheets", replace lines 50-60 with:
       - name: 5. Upload Video and Save to Google Sheets
         run: |
-          # 1. Upload video and get link
-          DOWNLOAD_URL=$(curl -s -f -F "reqtype=fileupload" -F "time=24h" -F "fileToUpload=@output.mp4" https://litterbox.catbox.moe/resources/internals/api.php)
-          
-          # Validate that URL was obtained
-          if [ -z "$DOWNLOAD_URL" ]; then
-            echo "Error: Failed to upload video to Catbox"
-            exit 1
-          fi
-          
-          echo "Link vua tao: $DOWNLOAD_URL"
-          
-          # 2. URL encode the title
+          # 1. Upload video lên Litterbox để lấy link tải (Direct Link)
+          DOWNLOAD_URL=$(curl -s -F "reqtype=fileupload" -F "time=24h" -F "fileToUpload=@output.mp4" https://litterbox.catbox.moe/resources/internals/api.php)
+          echo "Link download: $DOWNLOAD_URL"
+      
+          # 2. Xử lý mã hóa tiêu đề (URL Encode) để tránh lỗi nếu tiêu đề có dấu cách hoặc tiếng Việt
           TITLE_ENCODED=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''${{ github.event.client_payload.title }}'''))")
           
-          # 3. Send to Google Sheets with proper quoting
-          curl -L "https://script.google.com/macros/s/AKfycbxKtdzArCSoJom9rVoozQYmEAgZrK1eeEb0QEPP0VFlZzr8cUOEr0dNwoAMiErniJ_9/exec?title=${TITLE_ENCODED}&url=${DOWNLOAD_URL}"
+          # 3. URL encode the download URL as well
+          DOWNLOAD_URL_ENCODED=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$DOWNLOAD_URL'''))")
+      
+          # 4. Gửi dữ liệu về Google Sheets qua hàm doGet (Web App URL)
+          curl -L "https://script.google.com/macros/s/AKfycbxKtdzArCSoJom9rVoozQYmEAgZrK1eeEb0QEPP0VFlZzr8cUOEr0dNwoAMiErniJ_9/exec?title=$TITLE_ENCODED&url=$DOWNLOAD_URL_ENCODED"
