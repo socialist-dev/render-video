@@ -47,27 +47,33 @@ jobs:
 
       # Option 2
       # In step "5. Upload Video and Save to Google Sheets", replace lines 50-60 with:
-      - name: 5. Upload Video and Save to Google Sheets
+      - name: 5. Upload Video to GoFile and Save to Google Sheets
         run: |
-          # 1. Upload lên Catbox (Thêm User-Agent để tránh lỗi "Invalid uploader")
-          # -A: Giả danh trình duyệt Chrome để không bị Catbox chặn IP
-          DOWNLOAD_URL=$(curl -s -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
-          -F "reqtype=fileupload" \
-          -F "fileToUpload=@output.mp4" \
-          https://catbox.moe/user/api.php)
+          # 1. Lấy server tốt nhất hiện tại từ GoFile
+          SERVER_DATA=$(curl -s https://api.gofile.io/getServer)
+          SERVER=$(echo $SERVER_DATA | python3 -c "import sys, json; print(json.load(sys.stdin)['data']['server'])")
+          echo "✅ Using GoFile Server: $SERVER"
+
+          # 2. Upload video theo chuẩn API GoFile
+          # Sử dụng Authorization: Bearer như tài liệu khuyến nghị
+          UPLOAD_RESPONSE=$(curl -s -F "file=@output.mp4" \
+            -H "Authorization: Bearer ${{ secrets.GOFILE_TOKEN }}" \
+            "https://${SERVER}.gofile.io/uploadFile")
           
-          # Kiểm tra nếu kết quả không phải link files.catbox.moe
-          if [[ "$DOWNLOAD_URL" != *catbox.moe* ]]; then
-            echo "❌ Catbox Upload Failed! Server returned: $DOWNLOAD_URL"
+          # 3. Trích xuất link trang download (downloadPage)
+          DOWNLOAD_URL=$(echo $UPLOAD_RESPONSE | python3 -c "import sys, json; print(json.load(sys.stdin)['data']['downloadPage'])")
+          
+          if [[ "$DOWNLOAD_URL" != http* ]]; then
+            echo "❌ GoFile Upload Failed!"
+            echo "$UPLOAD_RESPONSE"
             exit 1
           fi
-          
-          echo "✅ Catbox URL: $DOWNLOAD_URL"
+          echo "✅ Link download: $DOWNLOAD_URL"
       
-          # 2. Xử lý mã hóa Tiêu đề và URL
+          # 4. Mã hóa Tiêu đề và URL để gửi sang Google Sheets
           TITLE_RAW="${{ github.event.client_payload.title }}"
           TITLE_ENCODED=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$TITLE_RAW'''))")
           URL_ENCODED=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$DOWNLOAD_URL'''))")
       
-          # 3. Gửi sang Google Sheets qua Apps Script
-          curl -f -L "https://script.google.com/macros/s/AKfycbxKtdzArCSoJom9rVoozQYmEAgZrK1eeEb0QEPP0VFlZzr8cUOEr0dNwoAMiErniJ_9/exec?title=$TITLE_ENCODED&url=$URL_ENCODED"
+          # 5. Gửi dữ liệu về Google Sheets qua Apps Script
+          curl -f -L "https://script.google.com/macros/s/AKfycbxKtdzArCSoJom9rVoozQYmEAgZrK1eeEb0QEPP0VFlZzr8cUOEr0dNwoAMiErniJ_9/exec?title=${TITLE_ENCODED}&url=${URL_ENCODED}"
