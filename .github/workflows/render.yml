@@ -48,15 +48,19 @@ jobs:
       # Option 2
       - name: 5. Upload Video and Save to Google Sheets
         run: |
-          # 1. Upload video lấy link (Thêm cờ -f để báo lỗi nếu upload thất bại)
+          # 1. Upload video and get link
           DOWNLOAD_URL=$(curl -s -f -F "reqtype=fileupload" -F "time=24h" -F "fileToUpload=@output.mp4" https://litterbox.catbox.moe/resources/internals/api.php)
           
-          # In ra log để bạn kiểm tra trên GitHub xem link có thật không
+          # Validate that URL was obtained
+          if [ -z "$DOWNLOAD_URL" ]; then
+            echo "Error: Failed to upload video to Catbox"
+            exit 1
+          fi
+          
           echo "Link vua tao: $DOWNLOAD_URL"
-
-          # 2. Mã hóa tiêu đề (Xử lý tiếng Việt và dấu cách)
+          
+          # 2. URL encode the title
           TITLE_ENCODED=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''${{ github.event.client_payload.title }}'''))")
-
-          # 3. Gửi sang Google Sheets
-          # Dùng dấu ${} để bao biến giúp lệnh curl nhận diện chính xác link Catbox
+          
+          # 3. Send to Google Sheets with proper quoting
           curl -L "https://script.google.com/macros/s/AKfycbxKtdzArCSoJom9rVoozQYmEAgZrK1eeEb0QEPP0VFlZzr8cUOEr0dNwoAMiErniJ_9/exec?title=${TITLE_ENCODED}&url=${DOWNLOAD_URL}"
