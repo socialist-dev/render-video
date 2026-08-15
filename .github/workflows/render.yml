@@ -47,33 +47,56 @@ jobs:
 
       # Option 2
       # In step "5. Upload Video and Save to Google Sheets", replace lines 50-60 with:
-      - name: 5. Upload Video to GoFile and Save to Google Sheets
+      - name: 5. Upload Video to GoFile and Save to Sheets
+        env:
+          GOFILE_TOKEN: ${{ secrets.GOFILE_TOKEN }}
+          TITLE: ${{ github.event.client_payload.title }}
+          GS_URL: "https://script.google.com/macros/s/AKfycbxKtdzArCSoJom9rVoozQYmEAgZrK1eeEb0QEPP0VFlZzr8cUOEr0dNwoAMiErniJ_9/exec"
         run: |
-          # 1. Lấy server tốt nhất hiện tại từ GoFile
-          SERVER_DATA=$(curl -s https://api.gofile.io/getServer)
-          SERVER=$(echo $SERVER_DATA | python3 -c "import sys, json; print(json.load(sys.stdin)['data']['server'])")
-          echo "✅ Using GoFile Server: $SERVER"
-
-          # 2. Upload video theo chuẩn API GoFile
-          # Sử dụng Authorization: Bearer như tài liệu khuyến nghị
-          UPLOAD_RESPONSE=$(curl -s -F "file=@output.mp4" \
-            -H "Authorization: Bearer ${{ secrets.GOFILE_TOKEN }}" \
-            "https://${SERVER}.gofile.io/uploadFile")
+          python3 -c "
+          import requests, os, urllib.parse, sys
           
-          # 3. Trích xuất link trang download (downloadPage)
-          DOWNLOAD_URL=$(echo $UPLOAD_RESPONSE | python3 -c "import sys, json; print(json.load(sys.stdin)['data']['downloadPage'])")
+          def run():
+              try:
+                  headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
+                  
+                  # 1. Lấy server rảnh
+                  print('--- Fetching GoFile Server ---')
+                  r_server = requests.get('https://api.gofile.io/getServer', headers=headers)
+                  if r_server.status_code != 200:
+                      print(f'Error fetching server: {r_server.text}')
+                      sys.exit(1)
+                  
+                  server = r_server.json()['data']['server']
+                  print(f'✅ Using Server: {server}')
           
-          if [[ "$DOWNLOAD_URL" != http* ]]; then
-            echo "❌ GoFile Upload Failed!"
-            echo "$UPLOAD_RESPONSE"
-            exit 1
-          fi
-          echo "✅ Link download: $DOWNLOAD_URL"
-      
-          # 4. Mã hóa Tiêu đề và URL để gửi sang Google Sheets
-          TITLE_RAW="${{ github.event.client_payload.title }}"
-          TITLE_ENCODED=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$TITLE_RAW'''))")
-          URL_ENCODED=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$DOWNLOAD_URL'''))")
-      
-          # 5. Gửi dữ liệu về Google Sheets qua Apps Script
-          curl -f -L "https://script.google.com/macros/s/AKfycbxKtdzArCSoJom9rVoozQYmEAgZrK1eeEb0QEPP0VFlZzr8cUOEr0dNwoAMiErniJ_9/exec?title=${TITLE_ENCODED}&url=${URL_ENCODED}"
+                  # 2. Upload video
+                  print('--- Uploading Video ---')
+                  with open('output.mp4', 'rb') as f:
+                      files = {'file': f}
+                      # Gửi token nếu có, nếu không GoFile sẽ tự tạo Guest account
+                      data = {'token': os.environ.get('GOFILE_TOKEN')}
+                      r_upload = requests.post(f'https://{server}.gofile.io/uploadFile', files=files, data=data, headers=headers)
+                  
+                  if r_upload.status_code != 200:
+                      print(f'Upload failed: {r_upload.text}')
+                      sys.exit(1)
+                  
+                  download_url = r_upload.json()['data']['downloadPage']
+                  print(f'✅ Download Link: {download_url}')
+          
+                  # 3. Gửi sang Google Sheets
+                  print('--- Sending to Google Sheets ---')
+                  title_enc = urllib.parse.quote(os.environ.get('TITLE', 'No Title'))
+                  url_enc = urllib.parse.quote(download_url)
+                  
+                  final_gs_url = f'{os.environ["GS_URL"]}?title={title_enc}&url={url_enc}'
+                  r_gs = requests.get(final_gs_url, allow_redirects=True)
+                  print(f'✅ Google Sheets response: {r_gs.text}')
+                  
+              except Exception as e:
+                  print(f'❌ CRITICAL ERROR: {str(e)}')
+                  sys.exit(1)
+          
+          run()
+          "
