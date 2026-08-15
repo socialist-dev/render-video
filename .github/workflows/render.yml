@@ -59,4 +59,4 @@ jobs:
 
           # 3. Gửi sang Google Sheets
           # Dùng dấu ${} để bao biến giúp lệnh curl nhận diện chính xác link Catbox
-          curl -L "https://script.google.com/macros/s/AKfycbxLWGH6_LYgSBeE6-OeDfgjA5KVhV8SeIHob4rkU2z_QcS70D1sepsx2Vr8TkFyrtb3/exec?title=${TITLE_ENCODED}&url=${DOWNLOAD_URL}"
+          curl -L "https://script.google.com/macros/s/AKfycbxKtdzArCSoJom9rVoozQYmEAgZrK1eeEb0QEPP0VFlZzr8cUOEr0dNwoAMiErniJ_9/exec?title=${TITLE_ENCODED}&url=${DOWNLOAD_URL}"
