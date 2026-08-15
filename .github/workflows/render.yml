@@ -47,56 +47,46 @@ jobs:
 
       # Option 2
       # In step "5. Upload Video and Save to Google Sheets", replace lines 50-60 with:
-      - name: 5. Upload Video to GoFile and Save to Sheets
+      - name: 5. Upload to Telegram and Log to Sheets
         env:
-          GOFILE_TOKEN: ${{ secrets.GOFILE_TOKEN }}
-          TITLE: ${{ github.event.client_payload.title }}
+          TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           GS_URL: "https://script.google.com/macros/s/AKfycbxKtdzArCSoJom9rVoozQYmEAgZrK1eeEb0QEPP0VFlZzr8cUOEr0dNwoAMiErniJ_9/exec"
+          TITLE: ${{ github.event.client_payload.title }}
         run: |
           python3 -c "
           import requests, os, urllib.parse, sys
           
           def run():
               try:
-                  headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
-                  
-                  # 1. Lấy server rảnh
-                  print('--- Fetching GoFile Server ---')
-                  r_server = requests.get('https://api.gofile.io/getServer', headers=headers)
-                  if r_server.status_code != 200:
-                      print(f'Error fetching server: {r_server.text}')
-                      sys.exit(1)
-                  
-                  server = r_server.json()['data']['server']
-                  print(f'✅ Using Server: {server}')
-          
-                  # 2. Upload video
-                  print('--- Uploading Video ---')
+                  # 1. Upload video lên Telegram
+                  print('--- Uploading to Telegram ---')
                   with open('output.mp4', 'rb') as f:
-                      files = {'file': f}
-                      # Gửi token nếu có, nếu không GoFile sẽ tự tạo Guest account
-                      data = {'token': os.environ.get('GOFILE_TOKEN')}
-                      r_upload = requests.post(f'https://{server}.gofile.io/uploadFile', files=files, data=data, headers=headers)
+                      r_tg = requests.post(
+                          f'https://api.telegram.org/bot{os.environ["TG_TOKEN"]}/sendVideo',
+                          data={'chat_id': os.environ['TG_CHAT_ID'], 'caption': '✅ Rendered: ' + os.environ['TITLE']},
+                          files={'video': f}
+                      )
                   
-                  if r_upload.status_code != 200:
-                      print(f'Upload failed: {r_upload.text}')
+                  if r_tg.status_code != 200:
+                      print(f'Telegram Error: {r_tg.text}')
                       sys.exit(1)
                   
-                  download_url = r_upload.json()['data']['downloadPage']
-                  print(f'✅ Download Link: {download_url}')
+                  # Lấy file_id từ kết quả trả về
+                  file_id = r_tg.json()['result']['video']['file_id']
+                  print(f'✅ File ID: {file_id}')
           
-                  # 3. Gửi sang Google Sheets
-                  print('--- Sending to Google Sheets ---')
-                  title_enc = urllib.parse.quote(os.environ.get('TITLE', 'No Title'))
-                  url_enc = urllib.parse.quote(download_url)
+                  # 2. Gửi file_id sang Google Sheets thay vì URL tạm
+                  print('--- Logging to Google Sheets ---')
+                  title_enc = urllib.parse.quote(os.environ['TITLE'])
+                  file_id_enc = urllib.parse.quote(file_id)
                   
-                  final_gs_url = f'{os.environ["GS_URL"]}?title={title_enc}&url={url_enc}'
-                  r_gs = requests.get(final_gs_url, allow_redirects=True)
+                  final_gs_url = f'{os.environ["GS_URL"]}?title={title_enc}&url={file_id_enc}'
+                  r_gs = requests.get(final_gs_url)
                   print(f'✅ Google Sheets response: {r_gs.text}')
                   
               except Exception as e:
-                  print(f'❌ CRITICAL ERROR: {str(e)}')
+                  print(f'❌ Error: {str(e)}')
                   sys.exit(1)
-          
           run()
           "
