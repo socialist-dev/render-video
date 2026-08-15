@@ -49,25 +49,25 @@ jobs:
       # In step "5. Upload Video and Save to Google Sheets", replace lines 50-60 with:
       - name: 5. Upload Video and Save to Google Sheets
         run: |
-          # 1. Upload lên Catbox theo đúng chuẩn API (Chỉ gửi reqtype và fileToUpload)
-          # -s: chạy im lặng | -f: báo lỗi nếu server lỗi | -L: theo dõi redirect
-          DOWNLOAD_URL=$(curl -s -L -F "reqtype=fileupload" -F "fileToUpload=@output.mp4" https://catbox.moe/user/api.php)
+          # 1. Upload lên Catbox (Thêm User-Agent để tránh lỗi "Invalid uploader")
+          # -A: Giả danh trình duyệt Chrome để không bị Catbox chặn IP
+          DOWNLOAD_URL=$(curl -s -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
+          -F "reqtype=fileupload" \
+          -F "fileToUpload=@output.mp4" \
+          https://catbox.moe/user/api.php)
           
-          # 2. Kiểm tra xem kết quả trả về có phải là link files.catbox.moe không
+          # Kiểm tra nếu kết quả không phải link files.catbox.moe
           if [[ "$DOWNLOAD_URL" != *catbox.moe* ]]; then
-            echo "❌ Catbox Upload Failed! Server returned:"
-            echo "$DOWNLOAD_URL"
+            echo "❌ Catbox Upload Failed! Server returned: $DOWNLOAD_URL"
             exit 1
           fi
           
           echo "✅ Catbox URL: $DOWNLOAD_URL"
       
-          # 3. Xử lý mã hóa Tiêu đề và URL để gửi sang Google Sheets
+          # 2. Xử lý mã hóa Tiêu đề và URL
           TITLE_RAW="${{ github.event.client_payload.title }}"
-          
-          # Dùng Python để URL Encode đảm bảo không bị lỗi ký tự đặc biệt/tiếng Việt
           TITLE_ENCODED=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$TITLE_RAW'''))")
           URL_ENCODED=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$DOWNLOAD_URL'''))")
       
-          # 4. Gửi dữ liệu về Google Sheets qua Apps Script URL của bạn
+          # 3. Gửi sang Google Sheets qua Apps Script
           curl -f -L "https://script.google.com/macros/s/AKfycbxKtdzArCSoJom9rVoozQYmEAgZrK1eeEb0QEPP0VFlZzr8cUOEr0dNwoAMiErniJ_9/exec?title=$TITLE_ENCODED&url=$URL_ENCODED"
