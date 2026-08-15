@@ -49,24 +49,25 @@ jobs:
       # In step "5. Upload Video and Save to Google Sheets", replace lines 50-60 with:
       - name: 5. Upload Video and Save to Google Sheets
         run: |
-          # 1. Upload video lên file.io (Rất ổn định cho GitHub Actions)
-          # Dịch vụ này trả về JSON, chúng ta dùng Python để lấy link sạch
-          RESPONSE=$(curl -s -F "file=@output.mp4" https://file.io)
-          DOWNLOAD_URL=$(python3 -c "import json, sys; print(json.loads('''$RESPONSE''').get('link', 'ERROR'))")
+          # 1. Upload lên Catbox theo đúng chuẩn API (Chỉ gửi reqtype và fileToUpload)
+          # -s: chạy im lặng | -f: báo lỗi nếu server lỗi | -L: theo dõi redirect
+          DOWNLOAD_URL=$(curl -s -L -F "reqtype=fileupload" -F "fileToUpload=@output.mp4" https://catbox.moe/user/api.php)
           
-          # Kiểm tra nếu upload lỗi
-          if [ "$DOWNLOAD_URL" == "ERROR" ] || [ -z "$DOWNLOAD_URL" ]; then
-            echo "❌ Upload failed! Response from server:"
-            echo "$RESPONSE"
+          # 2. Kiểm tra xem kết quả trả về có phải là link files.catbox.moe không
+          if [[ "$DOWNLOAD_URL" != *catbox.moe* ]]; then
+            echo "❌ Catbox Upload Failed! Server returned:"
+            echo "$DOWNLOAD_URL"
             exit 1
           fi
           
-          echo "✅ Link download: $DOWNLOAD_URL"
+          echo "✅ Catbox URL: $DOWNLOAD_URL"
       
-          # 2. Xử lý mã hóa tiêu đề và URL (URL Encode)
+          # 3. Xử lý mã hóa Tiêu đề và URL để gửi sang Google Sheets
           TITLE_RAW="${{ github.event.client_payload.title }}"
+          
+          # Dùng Python để URL Encode đảm bảo không bị lỗi ký tự đặc biệt/tiếng Việt
           TITLE_ENCODED=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$TITLE_RAW'''))")
           URL_ENCODED=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$DOWNLOAD_URL'''))")
       
-          # 3. Gửi dữ liệu về Google Sheets qua Apps Script
+          # 4. Gửi dữ liệu về Google Sheets qua Apps Script URL của bạn
           curl -f -L "https://script.google.com/macros/s/AKfycbxKtdzArCSoJom9rVoozQYmEAgZrK1eeEb0QEPP0VFlZzr8cUOEr0dNwoAMiErniJ_9/exec?title=$TITLE_ENCODED&url=$URL_ENCODED"
