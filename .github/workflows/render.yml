@@ -113,41 +113,59 @@ jobs:
           import requests, os, urllib.parse, sys
           
           def run():
-              try:
-                  token = os.environ.get('TELEGRAM_TOKEN')
-                  chat_id = os.environ.get('TELEGRAM_CHAT_ID')
-                  title = os.environ.get('TITLE', 'No Title')
-                  gs_url = os.environ.get('GS_URL')
+              token = os.environ.get('TELEGRAM_TOKEN')
+              chat_id = os.environ.get('TELEGRAM_CHAT_ID')
+              title = os.environ.get('TITLE', 'No Title')
+              gs_url = os.environ.get('GS_URL')
 
-                  # 1. Upload VIDEO lên Telegram
-                  print('--- Uploading Video ---')
+              # --- 1. Upload VIDEO lên Telegram ---
+              print('--- Uploading Video ---')
+              video_file_id = 'Upload Failed'
+              try:
                   with open('output.mp4', 'rb') as f:
                       r_v = requests.post(f'https://api.telegram.org/bot{token}/sendVideo', 
-                          data={'chat_id': chat_id}, files={'video': f})
-                  video_file_id = r_v.json()['result']['video']['file_id']
+                          data={'chat_id': chat_id}, files={'video': f}, timeout=60)
+                      if r_v.status_code == 200:
+                          video_file_id = r_v.json()['result']['video']['file_id']
+                          print(f'✅ Video ID: {video_file_id}')
+                      else:
+                          print(f'❌ Video Upload Error: {r_v.text}')
+              except Exception as e:
+                  print(f'❌ Video Exception: {e}')
 
-                  # 2. Upload THUMBNAIL lên Telegra.ph (Siêu ổn định)
-                  print('--- Uploading Thumbnail ---')
+              # --- 2. Upload THUMBNAIL lên Telegra.ph ---
+              print('--- Uploading Thumbnail ---')
+              thumb_url = 'Upload Failed'
+              try:
                   with open('cover.png', 'rb') as f:
-                      r_img = requests.post('https://telegra.ph/upload', files={'file': ('cover.png', f, 'image/png')})
-                  thumb_url = 'https://telegra.ph' + r_img.json()[0]['src']
+                      # Gửi kèm header User-Agent để tránh bị chặn
+                      files = {'file': ('cover.png', f, 'image/png')}
+                      r_img = requests.post('https://telegra.ph/upload', files=files, timeout=30)
+                      
+                      # Kiểm tra nếu phản hồi là mảng JSON (đúng chuẩn Telegra.ph)
+                      res_img = r_img.json()
+                      if isinstance(res_json := res_img, list) and len(res_json) > 0:
+                          thumb_url = 'https://telegra.ph' + res_json[0].get('src', '')
+                          print(f'✅ Thumb URL: {thumb_url}')
+                      else:
+                          print(f'❌ Telegra.ph returned: {res_img}')
+              except Exception as e:
+                  print(f'❌ Thumbnail Exception: {e}')
 
-                  # 3. Ghi vào Google Sheets (Gửi đúng 3 tham số: title, url, thumb)
-                  print('--- Logging to Sheets ---')
+              # --- 3. Gửi sang Google Sheets (Dù bước trên lỗi vẫn gửi) ---
+              print('--- Logging to Sheets ---')
+              try:
                   params = {
                       'title': title,
                       'url': video_file_id,
                       'thumb': thumb_url
                   }
-                  # urllib.parse.urlencode sẽ giúp nối 3 biến này thành 1 chuỗi URL chuẩn
                   final_url = gs_url + '?' + urllib.parse.urlencode(params)
-                  
-                  r_gs = requests.get(final_url)
+                  r_gs = requests.get(final_url, timeout=30)
                   print(f'✅ Google Sheets response: {r_gs.text}')
-                  
               except Exception as e:
-                  print(f'❌ Error: {str(e)}')
+                  print(f'❌ Google Sheets Exception: {e}')
                   sys.exit(1)
+
           run()
           "
-    
