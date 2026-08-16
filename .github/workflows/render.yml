@@ -106,7 +106,7 @@ jobs:
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          GS_URL: "https://script.google.com/macros/s/AKfycbxKtdzArCSoJom9rVoozQYmEAgZrK1eeEb0QEPP0VFlZzr8cUOEr0dNwoAMiErniJ_9/exec"
+          GS_URL: "https://script.google.com/macros/s/AKfycbzgPS_oiC0hm-GvQRd9AhhajdhqR-3npbT-0ltAaPBkRCqiGPk-qtzM5aVhLCaSI-pn/exec"
           TITLE: ${{ github.event.client_payload.title }}
         run: |
           python3 -c "
@@ -119,40 +119,29 @@ jobs:
                   title = os.environ.get('TITLE', 'No Title')
                   gs_url = os.environ.get('GS_URL')
 
-                  # 1. Upload VIDEO lên Telegram (Lấy file_id để n8n tải)
-                  print('--- Uploading Video to Telegram ---')
+                  # 1. Upload VIDEO lên Telegram
+                  print('--- Uploading Video ---')
                   with open('output.mp4', 'rb') as f:
                       r_v = requests.post(f'https://api.telegram.org/bot{token}/sendVideo', 
                           data={'chat_id': chat_id}, files={'video': f})
                   video_file_id = r_v.json()['result']['video']['file_id']
 
-                  # 2. Upload ẢNH lên Telegra.ph (Để lấy URL ảnh công khai)
-                  # Dịch vụ này của Telegram nên cực kỳ ổn định và không chặn GitHub
-                  print('--- Uploading Thumbnail to Telegra.ph ---')
+                  # 2. Upload THUMBNAIL lên Telegra.ph (Siêu ổn định)
+                  print('--- Uploading Thumbnail ---')
                   with open('cover.png', 'rb') as f:
-                      # Telegra.ph yêu cầu cấu trúc file cụ thể
-                      files = {'file': ('cover.png', f, 'image/png')}
-                      r_img = requests.post('https://telegra.ph/upload', files=files)
-                  
-                  # Telegra.ph trả về mảng JSON, lấy phần tử đầu tiên
-                  res_img = r_img.json()
-                  if isinstance(res_img, list) and 'src' in res_img[0]:
-                      thumb_url = 'https://telegra.ph' + res_img[0]['src']
-                  else:
-                      print(f'❌ Telegra.ph Error: {res_img}')
-                      thumb_url = 'Upload Failed'
-                  
-                  print(f'✅ Video ID: {video_file_id}')
-                  print(f'✅ Thumb URL: {thumb_url}')
-          
-                  # 3. Gửi sang Google Sheets
+                      r_img = requests.post('https://telegra.ph/upload', files={'file': ('cover.png', f, 'image/png')})
+                  thumb_url = 'https://telegra.ph' + r_img.json()[0]['src']
+
+                  # 3. Ghi vào Google Sheets (Gửi đúng 3 tham số: title, url, thumb)
                   print('--- Logging to Sheets ---')
                   params = {
                       'title': title,
                       'url': video_file_id,
                       'thumb': thumb_url
                   }
+                  # urllib.parse.urlencode sẽ giúp nối 3 biến này thành 1 chuỗi URL chuẩn
                   final_url = gs_url + '?' + urllib.parse.urlencode(params)
+                  
                   r_gs = requests.get(final_url)
                   print(f'✅ Google Sheets response: {r_gs.text}')
                   
