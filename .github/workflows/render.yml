@@ -107,7 +107,7 @@ jobs:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           # Dán link Web App Apps Script mới nhất của bạn vào đây
-          GS_URL: "https://script.google.com/macros/s/AKfycbxKtdzArCSoJom9rVoozQYmEAgZrK1eeEb0QEPP0VFlZzr8cUOEr0dNwoAMiErniJ_9/exec"
+          GS_URL: "https://script.google.com/macros/s/AKfycbyFzhfFPzSne8QeTYMXU6DctgcwbylF8GmLFBW08ADLBTUFjtbcGjD6UIZe-DQbVIKH/exec"
           TITLE: ${{ github.event.client_payload.title }}
         run: |
           python3 -c "
